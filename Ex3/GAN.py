@@ -16,7 +16,7 @@ from sklearn.model_selection import train_test_split
 
 # =========================== configurations ===============================
 
-data_dir = "./data-sets"
+dataset_dir = "./data-sets"
 label_column = 'label'
 
 
@@ -27,15 +27,16 @@ class GanGenerator:
 
     def __init__(self, train_x, rsize, train_y):
         self.train_x = train_x
-        self.rsize = rsize
         self.train_y = train_y
+        self.rsize = rsize
         self.batch_size = 128
         self.epochs = 50
         self.random_noise_vector_dim = 100
 
     def generator(self, optimizer, output_shape):
         generator = Sequential()
-        generator.add(Dense(256, input_dim=self.random_noise_vector_dim, kernel_initializer=initializers.RandomNormal(stddev=0.02)))
+        generator.add(Dense(256, input_dim=self.random_noise_vector_dim,
+                            kernel_initializer=initializers.RandomNormal(stddev=0.02)))
         generator.add(LeakyReLU(0.2))
 
         generator.add(Dense(512))
@@ -68,26 +69,24 @@ class GanGenerator:
         return discriminator
 
     def generate(self):
-        config = tf.ConfigProto()
-        # config.gpu_options.allow_growth = True
-        sess = tf.Session(config=config)
-        K.set_session(sess)
+        K.set_session(tf.Session(config=tf.ConfigProto()))
 
         self.train_x = self.train_x.values
         x_train, y_train, x_test, y_test = train_test_split(self.train_x, self.train_y, test_size=0.3)
-        print(x_train.shape)
+        print("The model train data shape is {} ".format(x_train.shape))
 
-        # Split the training data into batches of size 128
+        # Split the training data into batches of 128
         num_of_iterations = self.train_x.shape[0] // self.batch_size
 
-        # Build our GAN netowrk
+        # create the GAN netowrk
         adam = Adam(lr=0.0002, beta_1=0.5)
         generator = self.generator(adam, x_train.shape[1])
         discriminator = self.discriminator(adam, x_train.shape[1])
         gan = self.create_gan_network(discriminator, generator, adam)
 
-        for epoch in range(self.epochs):
-            print('-' * 15, 'Starting Epoch %d/%d' % (epoch, self.epochs + 1), '-' * 15)
+        # Start training loop, every epoch traines on a batch of data
+        for epoch in range(1, self.epochs + 1):
+            print('=' * 20, 'Starting Epoch %d/%d' % (epoch, self.epochs), '=' * 20)
             for iteration in range(num_of_iterations):
                 # Get a random set of input noise and images
                 noise = np.random.normal(0, 1, size=[self.batch_size, self.random_noise_vector_dim])
@@ -106,17 +105,12 @@ class GanGenerator:
                 discriminator.train_on_batch(X, y_discriminator)
 
                 # Train generator
+                noise = np.random.normal(0, 1, size=[self.batch_size, self.random_noise_vector_dim])
                 y_gen = np.ones(self.batch_size)
                 discriminator.trainable = False
                 gan.train_on_batch(noise, y_gen)
 
-                if iteration % 100 == 0:
-                    print('-' * 15, 'Iteration %d/%d' % (iteration, num_of_iterations), '-' * 15)
-
-            # if epoch == 1 or epoch % 20 == 0:
-            #     #             plot_generated_images(epoch, generator)
-            #     self.plot_generated_data(epoch, generator, examples=self.rsize)
-            #
+                print('=' * 20, 'Iteration %d/%d' % (iteration, num_of_iterations), '=' * 20)
 
         noise = np.random.normal(0, 1, size=[int(self.rsize), int(self.random_noise_vector_dim)])
         generated_x = generator.predict(noise)
@@ -129,27 +123,21 @@ class GanGenerator:
 
     def create_gan_network(self, discriminator, generator, optimizer):
 
-        # Initially set trainable to False, only want to train either the generator or discriminator at a time
+        # set trainable to False as we want to train only the generator or discriminator at a time
         discriminator.trainable = False
 
-        # gan input (noise) will be 100-dimensional vectors
-        gan_input = Input(shape=(self.random_noise_vector_dim,))
+        # gan random noise input will be a 100-dim vector
+        generator_input = Input(shape=(self.random_noise_vector_dim,))
 
-        # the output of the generator (an image)
-        x = generator(gan_input)
+        # the output of the generator - generated data
+        generated_data = generator(generator_input)
 
         # get the output of the discriminator (probability if the image is real or not)
-        gan_output = discriminator(x)
-        gan = Model(inputs=gan_input, outputs=gan_output)
+        disc_output = discriminator(generated_data)
+
+        gan = Model(inputs=generator_input, outputs=disc_output)
         gan.compile(loss='binary_crossentropy', optimizer=optimizer)
         return gan
-
-    # def plot_generated_data(self, epoch, generator, examples=100, dim=(10, 10), figsize=(10, 10)):
-    #     noise = np.random.normal(0, 1, size=[examples, self.random_dim])
-    #     generated_images = generator.predict(noise)
-    #     print(generated_images.shape)
-    #     print(generated_images)
-
 
 # ========================== Main code ================================================
 
@@ -168,30 +156,23 @@ def generate_samples(num_samples_to_add, x_train, y_train, index_start):
     return x_train_gan
 
 
-def map_func(name):
-    #     return {
-    #         'Iris.csv': {'Iris-setosa': 0, 'Iris-versicolor': 1, 'Iris-virginica': 2},
-    #         'newIris.csv': {'Iris-setosa': 0, 'Iris-versicolor': 1, 'Iris-virginica': 2},
-    #         'car.csv': {'unacc': 0, 'acc': 1, 'good': 2, 'vgood': 3},
-    #         'sonar.csv': {'M': 0, 'R': 1},
-    #         'yeast.csv': {'CYT': 0, 'NUC': 1, 'MIT': 2, 'ME3': 3, 'ME2': 4, 'ME1': 5, 'EXC': 6, 'VAC': 7, 'POX': 8,
-    #                       'ERL': 9},
-    #     }.get(name, 'no_mapping')
-    return {'Iris.csv': {'Iris-setosa': 0, 'Iris-versicolor': 1, 'Iris-virginica': 2}, }.get(name, 'no_mapping')
-    # return {'wineQualityReds_no_index.csv': {'1': 0, '2': 1, '3': 2, '4': 3, '5': 4, '6': 5, '7': 6, '8': 7, '9': 8,
-    #                                          '10': 9}, }.get(name, 'no_mapping')
+def enumerate_classes(name):
+    return {
+        'iris_csv.csv': {'Iris-setosa': 0, 'Iris-versicolor': 1, 'Iris-virginica': 2},
+        # 'car.csv': {'unacc': 0, 'acc': 1, 'good': 2, 'vgood': 3}, 'sonar.csv': {'M': 0, 'R': 1}, 'yeast.csv': {
+        # 'CYT': 0, 'NUC': 1, 'MIT': 2, 'ME3': 3, 'ME2': 4, 'ME1': 5, 'EXC': 6, 'VAC': 7, 'POX': 8,'ERL': 9},
+    }.get(name, 'no_mapping')
 
 
-all_files = os.listdir(data_dir)
+all_files = os.listdir(dataset_dir)
 for file_name in all_files:
-    print("file: {}".format(file_name))
-    file_path = os.path.join(data_dir, file_name)
+    print("Start working with data-set: {}".format(file_name))
+    file_path = os.path.join(dataset_dir, file_name)
     if os.path.isfile(file_path):
         data = pd.read_csv(file_path)
-        mapping = map_func(file_name)
+        mapping = enumerate_classes(file_name)
         if mapping != 'no_mapping':
             data = data.replace(mapping)
-
 
         y = data[label_column]
         x = data.drop(label_column, axis=1)
@@ -199,4 +180,22 @@ for file_name in all_files:
             cols = x.columns
             x_new_samples = generate_samples(4 * len(x), x, y, len(x))
             x_new_samples.columns = cols
-            x_new_samples.to_csv("./{}".format(file_name))
+
+            if not os.path.exists("generated_data/"):
+                os.makedirs("generated_data/")
+
+            x_new_samples.to_csv("generated_data/generated_{}".format(file_name))
+
+
+# all_files = os.listdir(dataset_dir)
+# for file_name in all_files:
+#     if file_name == 'Admission_Predict.csv':
+#         print("Start working with data-set: {}".format(file_name))
+#         file_path = os.path.join(dataset_dir, file_name)
+#         if os.path.isfile(file_path):
+#             data = pd.read_csv(file_path)
+#             data.label = data.label.round().astype(int)
+#             data.to_csv(path_or_buf="./data-sets/Admission_Predict_classification.csv",index=False)
+
+print("Finished synthesizing data using GAN")
+
