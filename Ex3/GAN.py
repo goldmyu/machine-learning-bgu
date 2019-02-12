@@ -165,27 +165,28 @@ def enumerate_classes(name):
     }.get(name, 'no_mapping')
 
 
-all_files = os.listdir(dataset_dir)
-for file_name in all_files:
-    print("Start working with data-set: {}".format(file_name))
-    file_path = os.path.join(dataset_dir, file_name)
-    if os.path.isfile(file_path):
-        data = pd.read_csv(file_path)
-        mapping = enumerate_classes(file_name)
-        if mapping != 'no_mapping':
-            data = data.replace(mapping)
+def main(rsize):
+    all_files = os.listdir(dataset_dir)
+    for file_name in all_files:
+        print("Start working with data-set: {}".format(file_name))
+        file_path = os.path.join(dataset_dir, file_name)
+        if os.path.isfile(file_path):
+            data = pd.read_csv(file_path)
+            mapping = enumerate_classes(file_name)
+            if mapping != 'no_mapping':
+                data = data.replace(mapping)
 
-        y = data[label_column]
-        x = data.drop(label_column, axis=1)
-        if x.select_dtypes(include=[np.object]).empty:
-            cols = x.columns
-            x_new_samples = generate_samples(4 * len(x), x, y, len(x))
-            x_new_samples.columns = cols
+            y = data[label_column]
+            x = data.drop(label_column, axis=1)
+            if x.select_dtypes(include=[np.object]).empty:
+                cols = x.columns
+                x_new_samples = generate_samples(rsize*len(x)*10, x, y, len(x))
+                x_new_samples.columns = cols
 
-            if not os.path.exists("generated_data/"):
-                os.makedirs("generated_data/")
+                if not os.path.exists("generated_data/"):
+                    os.makedirs("generated_data/")
 
-            x_new_samples.to_csv("generated_data/generated_{}".format(file_name))
+                x_new_samples.to_csv("generated_data/generated_{}".format(file_name))
 
 
 # all_files = os.listdir(dataset_dir)
