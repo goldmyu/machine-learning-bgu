@@ -1,17 +1,13 @@
-from sklearn.datasets import load_iris, load_wine
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.preprocessing import LabelEncoder
-
+from sklearn.model_selection import KFold
 import pandas as pd
 import numpy as np
+from sklearn.metrics import precision_score
+from sklearn.metrics import accuracy_score
+from sklearn.metrics import recall_score
 
-# Create an object called iris with the iris data
-# data = load_wine()
-
-# Create a dataframe with the four feature variables
-# df = pd.DataFrame(data.data, columns=data.feature_names)
-# df['label'] = pd.Categorical.from_codes(data.target, data.target_names)
-df = pd.read_csv('https://archive.ics.uci.edu/ml/machine-learning-databases/abalone/abalone.data' )
+df = pd.read_csv('C:\ex3\wineQualityReds_no_index.csv' )
 
 
 c_size = 5
@@ -20,10 +16,20 @@ r_size = 0.5
 
 
 def compute_error(ensemble, x, y):
+    pred = predict_ensemble(ensemble, x)
+    return 1 - (pred == y).mean()
+
+
+def predict_ensemble(ensemble, x):
+    pred = predict_proba_ensemble(ensemble, x)
+    pred = np.argmax(pred, axis=1)
+    return pred
+
+
+def predict_proba_ensemble(ensemble, x):
     pred = np.asarray([clf.predict_proba(x) for clf in ensemble])
     pred = np.average(pred, axis=0)
-    pred = np.argmax(pred, axis=1)
-    return 1 - (pred == y).mean()
+    return pred
 
 
 def get_categorical_from_rnd(rnd, val_count):
@@ -38,8 +44,7 @@ def get_categorical_from_rnd(rnd, val_count):
 
 def generate_examples(x, creation_factor):
     examples_num = int(len(x) * creation_factor)
-    categorical_columns = x.select_dtypes(include='object').columns
-    categorical_data = pd.DataFrame(x, columns=categorical_columns)
+    categorical_columns = x.select_dtypes(include='int').columns
     numerical_data = x.drop(columns = categorical_columns)
     means = numerical_data.mean(axis=0).values
     stds = numerical_data.std(axis=0).values
@@ -47,17 +52,16 @@ def generate_examples(x, creation_factor):
     for i,col in enumerate(numerical_data.columns):
         numerical_examples[col] = np.random.normal(means[i], stds[i] , examples_num)
 
-    categorical_examples = generate_categorical_data( categorical_columns, categorical_data, examples_num)
+    categorical_examples = generate_categorical_data( categorical_columns, x, examples_num)
     examples = pd.concat([categorical_examples, numerical_examples], axis=1)
     return examples
 
 
-def generate_categorical_data(categorical_columns, categorical_data, examples_num):
+def generate_categorical_data(categorical_columns, x, examples_num):
+    categorical_data = pd.DataFrame(x, columns=categorical_columns)
     categorical_examples = pd.DataFrame(columns=categorical_columns)
     for i, col in enumerate(categorical_columns):
-        column = categorical_data.iloc[:,i]
-        column = pd.factorize(column, sort=True)[0]
-        val_count = pd.Series(column).value_counts()
+        val_count = categorical_data[col].value_counts()
         randoms = np.random.randint(0, len(categorical_data[col]), examples_num)
         categorical_vec = []
         for x in range(len(randoms)):
@@ -99,21 +103,17 @@ def factorize_categorical_data(x_with_categorical):
     return pd.DataFrame(x)
 
 
-def run_decorate(dataset=df, c_size=c_size, i_max=i_max, creation_factor=r_size):
+def run_decorate(x, y, c_size, i_max, creation_factor):
     i = 1
     trials = 1
     ensemble = []
-    x_with_categorical = dataset.iloc[:, 0:-1]
-    y = dataset.iloc[:, -1]
-    y = pd.factorize(y)[0]
-    x = factorize_categorical_data(x_with_categorical)
     clf = DecisionTreeClassifier(max_depth=2, min_samples_split=4)
     clf.fit(X=x, y=y)
     ensemble.append(clf)
     current_error = compute_error(ensemble, x, y)
     print("The initial error is : %.4f" % (current_error))
     while (i < c_size) & (trials < i_max):
-        generated_x = generate_examples(x_with_categorical, creation_factor)
+        generated_x = generate_examples(x, creation_factor)
         generated_y = label_examples(generated_x, ensemble)
         x_full = pd.concat([x, generated_x])
         y_full = pd.concat([pd.DataFrame(y), generated_y])
@@ -129,6 +129,36 @@ def run_decorate(dataset=df, c_size=c_size, i_max=i_max, creation_factor=r_size)
             ensemble.pop()
         trials += 1
     print("The final error is : %.4f" % (current_error))
+    return ensemble
 
 
-run_decorate(df, c_size, i_max, r_size)
+def run_10_fold_decorate(dataset=df, c_size=c_size, i_max=i_max, creation_factor= r_size):
+    kf= KFold(n_splits=10,shuffle=True)
+    x_with_categorical = dataset.iloc[:, 0:-1]
+    x = factorize_categorical_data(x_with_categorical)
+    y = dataset.iloc[:, -1]
+    y = pd.factorize(y)[0]
+    precisions = []
+    accuracies = []
+    recalls = []
+    recalls_macro=[]
+    for train_index, test_index in kf.split(x):
+        X_train, X_test = x.iloc[train_index], x.iloc[test_index]
+        y_train, y_test = y[train_index], y[test_index]
+        ensemble = run_decorate(X_train, y_train, c_size, i_max, creation_factor)
+        predicts = predict_ensemble(ensemble, X_test)
+        precisions.append(precision_score(y_test, predicts, average='micro'))
+        accuracies.append(accuracy_score(y_test,predicts))
+        recalls.append(recall_score(y_test,predicts, average='micro'))
+        recalls_macro.append(recall_score(y_test, predicts, average='macro'))
+    print("precisions")
+    print(*precisions)
+    print("accuracies")
+    print(*accuracies)
+    print("recalls")
+    print(*recalls)
+    print("recalls_macro")
+    print(*recalls_macro)
+
+
+run_10_fold_decorate(df, c_size, i_max, r_size)
