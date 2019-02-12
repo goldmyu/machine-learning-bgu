@@ -19,8 +19,6 @@ from sklearn.model_selection import train_test_split
 dataset_dir = "./data-sets"
 label_column = 'label'
 
-
-
 # ======================================= Class definitions ===================================================
 
 
@@ -158,10 +156,7 @@ def generate_samples(num_samples_to_add, x_train, y_train, index_start):
 
 
 def enumerate_classes(name):
-    return {
-        'iris_csv.csv': {'Iris-setosa': 0, 'Iris-versicolor': 1, 'Iris-virginica': 2},
-        # 'car.csv': {'unacc': 0, 'acc': 1, 'good': 2, 'vgood': 3}, 'sonar.csv': {'M': 0, 'R': 1}, 'yeast.csv': {
-        # 'CYT': 0, 'NUC': 1, 'MIT': 2, 'ME3': 3, 'ME2': 4, 'ME1': 5, 'EXC': 6, 'VAC': 7, 'POX': 8,'ERL': 9},
+    return {'iris_csv.csv': {'Iris-setosa': 0, 'Iris-versicolor': 1, 'Iris-virginica': 2},
     }.get(name, 'no_mapping')
 
 
