@@ -6,6 +6,7 @@ import numpy as np
 from sklearn.metrics import precision_score
 from sklearn.metrics import accuracy_score
 from sklearn.metrics import recall_score
+import timeit
 
 df = pd.read_csv('C:\ex3\wineQualityReds_no_index.csv' )
 
@@ -43,6 +44,7 @@ def get_categorical_from_rnd(rnd, val_count):
 
 
 def generate_examples(x, creation_factor):
+    start = timeit.default_timer()
     examples_num = int(len(x) * creation_factor)
     categorical_columns = x.select_dtypes(include='int').columns
     numerical_data = x.drop(columns = categorical_columns)
@@ -54,6 +56,8 @@ def generate_examples(x, creation_factor):
 
     categorical_examples = generate_categorical_data( categorical_columns, x, examples_num)
     examples = pd.concat([categorical_examples, numerical_examples], axis=1)
+    stop = timeit.default_timer()
+    print("Amount of seconds it took to generate examples: ", stop-start)
     return examples
 
 
@@ -128,11 +132,12 @@ def run_decorate(x, y, c_size, i_max, creation_factor):
         else:
             ensemble.pop()
         trials += 1
-    print("The final error is : %.4f" % (current_error))
+    print("The final error for this fold is : %.4f" % (current_error))
     return ensemble
 
 
 def run_10_fold_decorate(dataset=df, c_size=c_size, i_max=i_max, creation_factor= r_size):
+    start = timeit.default_timer()
     kf= KFold(n_splits=10,shuffle=True)
     x_with_categorical = dataset.iloc[:, 0:-1]
     x = factorize_categorical_data(x_with_categorical)
@@ -151,6 +156,8 @@ def run_10_fold_decorate(dataset=df, c_size=c_size, i_max=i_max, creation_factor
         accuracies.append(accuracy_score(y_test,predicts))
         recalls.append(recall_score(y_test,predicts, average='micro'))
         recalls_macro.append(recall_score(y_test, predicts, average='macro'))
+    stop = timeit.default_timer()
+    print("Amount of seconds it took to run the whole process: ", stop-start)
     print("precisions")
     print(*precisions)
     print("accuracies")
