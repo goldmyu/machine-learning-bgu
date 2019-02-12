@@ -1,0 +1,202 @@
+import gc
+import os
+import tensorflow as tf
+import pandas as pd
+import numpy as np
+
+from sklearn.preprocessing import StandardScaler
+from keras import backend as K
+from keras.layers import Input
+from keras.models import Model, Sequential
+from keras.layers.core import Dense, Dropout
+from keras.layers.advanced_activations import LeakyReLU
+from keras.optimizers import Adam
+from keras import initializers
+from sklearn.model_selection import train_test_split
+
+# =========================== configurations ===============================
+
+data_dir = "./data-sets"
+label_column = 'label'
+
+
+# ======================================= Class definitions ===================================================
+
+
+class GanGenerator:
+
+    def __init__(self, train_x, rsize, train_y):
+        self.train_x = train_x
+        self.rsize = rsize
+        self.train_y = train_y
+        self.batch_size = 128
+        self.epochs = 50
+        self.random_noise_vector_dim = 100
+
+    def generator(self, optimizer, output_shape):
+        generator = Sequential()
+        generator.add(Dense(256, input_dim=self.random_noise_vector_dim, kernel_initializer=initializers.RandomNormal(stddev=0.02)))
+        generator.add(LeakyReLU(0.2))
+
+        generator.add(Dense(512))
+        generator.add(LeakyReLU(0.2))
+
+        generator.add(Dense(1024))
+        generator.add(LeakyReLU(0.2))
+
+        generator.add(Dense(output_shape, activation='tanh'))
+        generator.compile(loss='binary_crossentropy', optimizer=optimizer)
+        return generator
+
+    def discriminator(self, optimizer, input_dim_shape):
+        discriminator = Sequential()
+        discriminator.add(
+            Dense(1024, input_dim=input_dim_shape, kernel_initializer=initializers.RandomNormal(stddev=0.02)))
+        discriminator.add(LeakyReLU(0.2))
+        discriminator.add(Dropout(0.3))
+
+        discriminator.add(Dense(512))
+        discriminator.add(LeakyReLU(0.2))
+        discriminator.add(Dropout(0.3))
+
+        discriminator.add(Dense(256))
+        discriminator.add(LeakyReLU(0.2))
+        discriminator.add(Dropout(0.3))
+
+        discriminator.add(Dense(1, activation='sigmoid'))
+        discriminator.compile(loss='binary_crossentropy', optimizer=optimizer)
+        return discriminator
+
+    def generate(self):
+        config = tf.ConfigProto()
+        # config.gpu_options.allow_growth = True
+        sess = tf.Session(config=config)
+        K.set_session(sess)
+
+        self.train_x = self.train_x.values
+        x_train, y_train, x_test, y_test = train_test_split(self.train_x, self.train_y, test_size=0.3)
+        print(x_train.shape)
+
+        # Split the training data into batches of size 128
+        num_of_iterations = self.train_x.shape[0] // self.batch_size
+
+        # Build our GAN netowrk
+        adam = Adam(lr=0.0002, beta_1=0.5)
+        generator = self.generator(adam, x_train.shape[1])
+        discriminator = self.discriminator(adam, x_train.shape[1])
+        gan = self.create_gan_network(discriminator, generator, adam)
+
+        for epoch in range(self.epochs):
+            print('-' * 15, 'Starting Epoch %d/%d' % (epoch, self.epochs + 1), '-' * 15)
+            for iteration in range(num_of_iterations):
+                # Get a random set of input noise and images
+                noise = np.random.normal(0, 1, size=[self.batch_size, self.random_noise_vector_dim])
+                real_data_batch = x_train[np.random.randint(0, x_train.shape[0], size=self.batch_size)]
+
+                generated_data_batch = generator.predict(noise)
+                X = np.concatenate([real_data_batch, generated_data_batch])
+
+                # Labels for generated and real data
+                y_discriminator = np.zeros(2 * self.batch_size)
+                # One-sided label smoothing
+                y_discriminator[:self.batch_size] = 0.9
+
+                # Train discriminator
+                discriminator.trainable = True
+                discriminator.train_on_batch(X, y_discriminator)
+
+                # Train generator
+                y_gen = np.ones(self.batch_size)
+                discriminator.trainable = False
+                gan.train_on_batch(noise, y_gen)
+
+                if iteration % 100 == 0:
+                    print('-' * 15, 'Iteration %d/%d' % (iteration, num_of_iterations), '-' * 15)
+
+            # if epoch == 1 or epoch % 20 == 0:
+            #     #             plot_generated_images(epoch, generator)
+            #     self.plot_generated_data(epoch, generator, examples=self.rsize)
+            #
+
+        noise = np.random.normal(0, 1, size=[int(self.rsize), int(self.random_noise_vector_dim)])
+        generated_x = generator.predict(noise)
+
+        del generator
+        del gan
+        del discriminator
+        gc.collect()
+        return pd.DataFrame(generated_x)
+
+    def create_gan_network(self, discriminator, generator, optimizer):
+
+        # Initially set trainable to False, only want to train either the generator or discriminator at a time
+        discriminator.trainable = False
+
+        # gan input (noise) will be 100-dimensional vectors
+        gan_input = Input(shape=(self.random_noise_vector_dim,))
+
+        # the output of the generator (an image)
+        x = generator(gan_input)
+
+        # get the output of the discriminator (probability if the image is real or not)
+        gan_output = discriminator(x)
+        gan = Model(inputs=gan_input, outputs=gan_output)
+        gan.compile(loss='binary_crossentropy', optimizer=optimizer)
+        return gan
+
+    # def plot_generated_data(self, epoch, generator, examples=100, dim=(10, 10), figsize=(10, 10)):
+    #     noise = np.random.normal(0, 1, size=[examples, self.random_dim])
+    #     generated_images = generator.predict(noise)
+    #     print(generated_images.shape)
+    #     print(generated_images)
+
+
+# ========================== Main code ================================================
+
+
+def generate_samples(num_samples_to_add, x_train, y_train, index_start):
+    scaler = StandardScaler()
+    scaler.fit(x_train)
+    x_scale = scaler.transform(x_train)
+
+    gan_generator = GanGenerator(train_x=pd.DataFrame(x_scale), rsize=int(num_samples_to_add), train_y=y_train)
+    x_train_gan = gan_generator.generate()
+
+    x_train_gan = scaler.inverse_transform(x_train_gan)
+    x_train_gan = pd.DataFrame(x_train_gan)
+    x_train_gan.index = x_train_gan.index + index_start
+    return x_train_gan
+
+
+def map_func(name):
+    #     return {
+    #         'Iris.csv': {'Iris-setosa': 0, 'Iris-versicolor': 1, 'Iris-virginica': 2},
+    #         'newIris.csv': {'Iris-setosa': 0, 'Iris-versicolor': 1, 'Iris-virginica': 2},
+    #         'car.csv': {'unacc': 0, 'acc': 1, 'good': 2, 'vgood': 3},
+    #         'sonar.csv': {'M': 0, 'R': 1},
+    #         'yeast.csv': {'CYT': 0, 'NUC': 1, 'MIT': 2, 'ME3': 3, 'ME2': 4, 'ME1': 5, 'EXC': 6, 'VAC': 7, 'POX': 8,
+    #                       'ERL': 9},
+    #     }.get(name, 'no_mapping')
+    return {'Iris.csv': {'Iris-setosa': 0, 'Iris-versicolor': 1, 'Iris-virginica': 2}, }.get(name, 'no_mapping')
+    # return {'wineQualityReds_no_index.csv': {'1': 0, '2': 1, '3': 2, '4': 3, '5': 4, '6': 5, '7': 6, '8': 7, '9': 8,
+    #                                          '10': 9}, }.get(name, 'no_mapping')
+
+
+all_files = os.listdir(data_dir)
+for file_name in all_files:
+    print("file: {}".format(file_name))
+    file_path = os.path.join(data_dir, file_name)
+    if os.path.isfile(file_path):
+        data = pd.read_csv(file_path)
+        mapping = map_func(file_name)
+        if mapping != 'no_mapping':
+            data = data.replace(mapping)
+
+
+        y = data[label_column]
+        x = data.drop(label_column, axis=1)
+        if x.select_dtypes(include=[np.object]).empty:
+            cols = x.columns
+            x_new_samples = generate_samples(4 * len(x), x, y, len(x))
+            x_new_samples.columns = cols
+            x_new_samples.to_csv("./{}".format(file_name))
