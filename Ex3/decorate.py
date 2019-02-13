@@ -153,7 +153,7 @@ def run_decorate(file_name,x, y, c_size, i_max, creation_factor, gan_mode, count
         if error_iter < current_error:
             i += 1
             current_error = error_iter
-            print("Found new ensemble, the error is : %.4f" % (current_error))
+            # print("Found new ensemble, the error is : %.4f" % (current_error))
         else:
             ensemble.pop()
         trials += 1
@@ -204,5 +204,7 @@ for file_name in all_files:
     file_path = os.path.join(dataset_dir, file_name)
     if os.path.isfile(file_path):
         df = pd.read_csv(file_path)
-        # run_10_fold_decorate(file_name, df, c_size, i_max, r_size, gan_mode=False)
+        print("Start running regular decorate")
+        run_10_fold_decorate(file_name, df, c_size, i_max, r_size, gan_mode=False)
+        print("Start running decorate with GAN")
         run_10_fold_decorate(file_name, df, c_size, i_max, r_size, gan_mode=True)
