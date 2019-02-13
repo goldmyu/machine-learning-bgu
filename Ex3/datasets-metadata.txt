@@ -11,3 +11,11 @@ List of all datasets
 5. iris - https://www.kaggle.com/styven/iris-dataset
 
 6. graduate admissions -  https://www.kaggle.com/mohansacharya/graduate-admissions
+
+7. chess - https://archive.ics.uci.edu/ml/datasets/Chess+%28King-Rook+vs.+King%29
+
+8. Tic-tac-toe - https://archive.ics.uci.edu/ml/datasets/Tic-Tac-Toe+Endgame
+
+9. balance scale - https://archive.ics.uci.edu/ml/datasets/Balance+Scale
+
+10. MAGIC Gamma Telescope - https://archive.ics.uci.edu/ml/datasets/MAGIC+Gamma+Telescope

@@ -182,10 +182,12 @@ def main(rsize):
 
             y = data[label_column]
             x = data.drop(label_column, axis=1)
+            categorical_columns = x.select_dtypes(include='int64').columns
             if x.select_dtypes(include=[np.object]).empty:
                 cols = x.columns
                 x_new_samples = train_gan_and_generate_data(rsize * len(x) * 10, x, y, len(x))
                 x_new_samples.columns = cols
+                x_new_samples=x_new_samples[categorical_columns].round()
 
                 if not os.path.exists("generated_data/"):
                     os.makedirs("generated_data/")
