@@ -1,4 +1,6 @@
 venv/
 .idea/
+generated_data/
+out.txt
 #red-wine-dataset/
 #Ex3/data-sets/
