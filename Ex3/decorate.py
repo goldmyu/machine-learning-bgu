@@ -43,7 +43,7 @@ def predict_proba_ensemble(ensemble, x):
 # get value according the probability of its occurrence using random number
 def get_categorical_from_rnd(rnd, val_count):
     count = 0
-    for x in range(len(val_count) - 1):
+    for x in val_count.index:
         if rnd < (count + val_count[x]):
             return x
         else:
@@ -51,10 +51,19 @@ def get_categorical_from_rnd(rnd, val_count):
     return len(val_count) - 1
 
 
+def get_label_from_rnd(rnd, val_count):
+    count = 0
+    for x in range(len(val_count) - 1):
+        if rnd < (count + val_count[x]):
+            return x
+        else:
+            count = count + val_count[x]
+    return len(val_count) - 1
+
 def generate_examples(x, examples_num):
     start = timeit.default_timer()
     # since we refactored all of the categorical features, they are now of type int
-    categorical_columns = x.select_dtypes(include='int').columns
+    categorical_columns = x.select_dtypes(include='int64').columns
     numerical_examples = generate_numeric_examples(categorical_columns, examples_num, x)
     categorical_examples = generate_categorical_data(categorical_columns, x, examples_num)
     examples = pd.concat([categorical_examples, numerical_examples], axis=1)
@@ -96,7 +105,7 @@ def inverse_pred(row):
 
 def select_label(row):
     number = np.random.random()
-    return get_categorical_from_rnd(number, row)
+    return get_label_from_rnd(number, row)
 
 
 def label_examples(generated_x, ensemble):
@@ -143,7 +152,7 @@ def run_decorate(file_name, x, y, c_size, i_max, creation_factor, gan_mode, coun
         else:
             generated_x = generate_examples(x, examples_num)
         generated_y = label_examples(generated_x, ensemble)
-        x_full = pd.concat([x, generated_x])
+        x_full = pd.concat([x, generated_x],sort=False)
         y_full = pd.concat([pd.DataFrame(y), generated_y])
         clf_iter = DecisionTreeClassifier(max_depth=3, min_samples_split=4)
         clf_iter.fit(X=x_full, y=y_full)
