@@ -119,11 +119,11 @@ def factorize_categorical_data(x_with_categorical):
     return pd.DataFrame(x)
 
 
-def generate_examples_gan(examples_num, file_name, counter):
+def generate_examples_gan(examples_num, file_name, trial_num, offset):
     file_path = os.path.join(gen_dataset_dir,"generated_"+ file_name)
     if os.path.isfile(file_path):
         data = pd.read_csv(file_path)
-        return data.iloc[counter*examples_num : (counter+1)*examples_num]
+        return data.iloc[((trial_num-1)*examples_num)+offset : (trial_num*examples_num)+offset]
 
 
 
@@ -140,7 +140,7 @@ def run_decorate(file_name,x, y, c_size, i_max, creation_factor, gan_mode, count
     examples_num = int(len(x) * creation_factor)
     while (i < c_size) & (trials < i_max):
         if gan_mode:
-            generated_x = generate_examples_gan(examples_num,file_name, counter)
+            generated_x = generate_examples_gan(examples_num,file_name, trials, counter*i_max*examples_num)
         else:
             generated_x = generate_examples(x, examples_num)
         generated_y = label_examples(generated_x, ensemble)
@@ -197,7 +197,7 @@ def run_10_fold_decorate(file_name, dataset, c_size=c_size, i_max=i_max, creatio
 
 
 
-# GAN.main(r_size)
+GAN.main(r_size*i_max)
 all_files = os.listdir(dataset_dir)
 for file_name in all_files:
     print("Start working with data-set: {}".format(file_name))
