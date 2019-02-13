@@ -13,8 +13,8 @@ import GAN
 
 # =========================== configurations ===============================
 
-c_size = 5
-i_max = 10
+c_size = 10
+i_max = 30
 r_size = 0.5
 gan_mode = False
 gen_dataset_dir = "generated_data/"
@@ -60,6 +60,7 @@ def get_label_from_rnd(rnd, val_count):
         else:
             count = count + val_count[x]
     return len(val_count) - 1
+
 
 def generate_examples(x, examples_num):
     start = timeit.default_timer()
@@ -155,7 +156,7 @@ def run_decorate(file_name, x, y, c_size, i_max, creation_factor, gan_mode, coun
         generated_y = label_examples(generated_x, ensemble)
         x_full = pd.concat([x, generated_x],sort=False)
         y_full = pd.concat([pd.DataFrame(y), generated_y])
-        clf_iter = DecisionTreeClassifier(max_depth=3, min_samples_split=4)
+        clf_iter = DecisionTreeClassifier(max_depth=2, min_samples_split=4)
         clf_iter.fit(X=x_full, y=y_full)
         ensemble.append(clf_iter)
         error_iter = compute_error(ensemble, x, y)
