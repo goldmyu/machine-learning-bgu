@@ -175,11 +175,9 @@ def run_10_fold_decorate(file_name, dataset, c_size=c_size, i_max=i_max, creatio
     start = timeit.default_timer()
     kf = KFold(n_splits=10, shuffle=True)
 
-    # y = dataset.iloc[:, -1]
     y = dataset[label_column]
     y = pd.factorize(y)[0]
 
-    # x_with_categorical = dataset.iloc[:, 0:-1]
     x_with_categorical = dataset.drop(label_column, axis=1)
     x = factorize_categorical_data(x_with_categorical)
 
@@ -199,7 +197,8 @@ def run_10_fold_decorate(file_name, dataset, c_size=c_size, i_max=i_max, creatio
         recalls_macro.append(recall_score(y_test, predicts, average='macro'))
         counter += 1
     stop = timeit.default_timer()
-    print("Amount of seconds it took to run the whole process: ", stop - start)
+    print("Statistics for dataset %s\n Using GAN mode ? %s" % (file_name, gan_mode))
+    print("Running time for 10-fold decorate %d" % (stop - start))
     print("precisions")
     print(*precisions)
     print("accuracies")

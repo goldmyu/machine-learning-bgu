@@ -20,6 +20,7 @@ from sklearn.model_selection import train_test_split
 
 dataset_dir = "./data-sets"
 label_column = 'label'
+training_budget = 5000
 
 
 # ======================================= Class definitions ===================================================
@@ -31,9 +32,10 @@ class GanGenerator:
         self.train_x = train_x
         self.train_y = train_y
         self.rsize = rsize
-        self.batch_size = 128
-        self.epochs = 100
         self.random_noise_vector_dim = 100
+        self.batch_size = 100
+        self.num_of_iterations = self.train_x.shape[0] // self.batch_size
+        self.epochs = max(10, training_budget // self.num_of_iterations)
 
     def generator(self, optimizer, output_shape):
         generator = Sequential()
@@ -77,9 +79,6 @@ class GanGenerator:
         x_train, y_train, x_test, y_test = train_test_split(self.train_x, self.train_y, test_size=0.3)
         print("The model train data shape is {} ".format(x_train.shape))
 
-        # Split the training data into batches of 128
-        num_of_iterations = self.train_x.shape[0] // self.batch_size
-
         # create the GAN netowrk
         adam = Adam(lr=0.0002, beta_1=0.5)
         generator = self.generator(adam, x_train.shape[1])
@@ -89,7 +88,7 @@ class GanGenerator:
         # Start training loop, every epoch traines on a batch of data
         for epoch in range(1, self.epochs + 1):
             print('=' * 20, 'Starting Epoch %d/%d' % (epoch, self.epochs), '=' * 20)
-            for iteration in range(num_of_iterations):
+            for iteration in range(self.num_of_iterations):
                 # Get a random set of input noise and images
                 noise = np.random.normal(0, 1, size=[self.batch_size, self.random_noise_vector_dim])
                 real_data_batch = x_train[np.random.randint(0, x_train.shape[0], size=self.batch_size)]
@@ -113,7 +112,7 @@ class GanGenerator:
                 gan.train_on_batch(noise, y_gen)
 
                 if iteration % 3 == 0:
-                    print('=' * 20, 'Iteration %d/%d' % (iteration, num_of_iterations), '=' * 20)
+                    print('=' * 20, 'Iteration %d/%d' % (iteration, self.num_of_iterations), '=' * 20)
 
         noise = np.random.normal(0, 1, size=[int(self.rsize), int(self.random_noise_vector_dim)])
         generated_x = generator.predict(noise)
