@@ -21,6 +21,8 @@ from sklearn.model_selection import train_test_split
 dataset_dir = "./data-sets"
 label_column = 'label'
 training_budget = 5000
+max_num_of_epochs = 300
+min_num_of_epochs = 10
 
 
 # ======================================= Class definitions ===================================================
@@ -35,7 +37,7 @@ class GanGenerator:
         self.random_noise_vector_dim = 100
         self.batch_size = 100
         self.num_of_iterations = self.train_x.shape[0] // self.batch_size
-        self.epochs = max(10, training_budget // self.num_of_iterations)
+        self.epochs = max(min_num_of_epochs, min(max_num_of_epochs, training_budget // self.num_of_iterations))
 
     def generator(self, optimizer, output_shape):
         generator = Sequential()
