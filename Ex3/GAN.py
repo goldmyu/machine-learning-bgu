@@ -112,7 +112,8 @@ class GanGenerator:
                 discriminator.trainable = False
                 gan.train_on_batch(noise, y_gen)
 
-                print('=' * 20, 'Iteration %d/%d' % (iteration, num_of_iterations), '=' * 20)
+                if iteration % 3 == 0:
+                    print('=' * 20, 'Iteration %d/%d' % (iteration, num_of_iterations), '=' * 20)
 
         noise = np.random.normal(0, 1, size=[int(self.rsize), int(self.random_noise_vector_dim)])
         generated_x = generator.predict(noise)
