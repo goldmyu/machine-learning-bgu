@@ -23,6 +23,7 @@ label_column = 'label'
 
 # ==================================================================================
 
+
 def compute_error(ensemble, x, y):
     pred = predict_ensemble(ensemble, x)
     return 1 - (pred == y).mean()

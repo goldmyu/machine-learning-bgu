@@ -32,7 +32,7 @@ class GanGenerator:
         self.train_y = train_y
         self.rsize = rsize
         self.batch_size = 128
-        self.epochs = 200
+        self.epochs = 100
         self.random_noise_vector_dim = 100
 
     def generator(self, optimizer, output_shape):
@@ -187,7 +187,7 @@ def main(rsize):
                 cols = x.columns
                 x_new_samples = train_gan_and_generate_data(rsize * len(x) * 10, x, y, len(x))
                 x_new_samples.columns = cols
-                x_new_samples=x_new_samples[categorical_columns].round()
+                x_new_samples[categorical_columns] = x_new_samples[categorical_columns].round()
 
                 if not os.path.exists("generated_data/"):
                     os.makedirs("generated_data/")
