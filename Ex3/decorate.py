@@ -19,7 +19,7 @@ r_size = 0.5
 gan_mode = False
 gen_dataset_dir = "generated_data/"
 dataset_dir = "data-sets/"
-
+label_column = 'label'
 
 # ==================================================================================
 
@@ -172,10 +172,15 @@ def run_decorate(file_name, x, y, c_size, i_max, creation_factor, gan_mode, coun
 def run_10_fold_decorate(file_name, dataset, c_size=c_size, i_max=i_max, creation_factor=r_size, gan_mode=gan_mode):
     start = timeit.default_timer()
     kf = KFold(n_splits=10, shuffle=True)
-    x_with_categorical = dataset.iloc[:, 0:-1]
-    x = factorize_categorical_data(x_with_categorical)
-    y = dataset.iloc[:, -1]
+
+    # y = dataset.iloc[:, -1]
+    y = dataset[label_column]
     y = pd.factorize(y)[0]
+
+    # x_with_categorical = dataset.iloc[:, 0:-1]
+    x_with_categorical = dataset.drop(label_column, axis=1)
+    x = factorize_categorical_data(x_with_categorical)
+
     precisions = []
     accuracies = []
     recalls = []

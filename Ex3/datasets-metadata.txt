@@ -14,7 +14,7 @@ List of all datasets
 
 7. chess - https://archive.ics.uci.edu/ml/datasets/Chess+%28King-Rook+vs.+King%29
 
-8. Tic-tac-toe - https://archive.ics.uci.edu/ml/datasets/Tic-Tac-Toe+Endgame
+8. Mushroom - https://archive.ics.uci.edu/ml/datasets/Mushroom
 
 9. balance scale - https://archive.ics.uci.edu/ml/datasets/Balance+Scale
 
