@@ -6,7 +6,7 @@ import tensorflow as tf
 import pandas as pd
 import numpy as np
 
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import StandardScaler, LabelEncoder
 from keras import backend as K
 from keras.layers import Input
 from keras.models import Model, Sequential
@@ -159,9 +159,19 @@ def generate_samples(num_samples_to_add, x_train, y_train, index_start):
     return x_train_gan
 
 
-def enumerate_classes(name):
-    return {'iris_csv.csv': {'Iris-setosa': 0, 'Iris-versicolor': 1, 'Iris-virginica': 2},
-            }.get(name, 'no_mapping')
+# def enumerate_classes(name):
+#     return {'iris_csv.csv': {'Iris-setosa': 0, 'Iris-versicolor': 1, 'Iris-virginica': 2},
+#             }.get(name, 'no_mapping')
+
+
+def factorize_dataset(data):
+    x = data.copy()
+    categorical_columns = x.select_dtypes(include='object').columns
+    for i, col in enumerate(categorical_columns):
+        label_encoder = LabelEncoder()
+        label_encoder.fit(x[col])
+        x[col] = label_encoder.transform(x[col])
+    return pd.DataFrame(x)
 
 
 def main(rsize):
@@ -172,9 +182,10 @@ def main(rsize):
         if os.path.isfile(file_path):
             dataset_start_train_time = time.time()
             data = pd.read_csv(file_path)
-            mapping = enumerate_classes(file_name)
-            if mapping != 'no_mapping':
-                data = data.replace(mapping)
+            # mapping = enumerate_classes(file_name)
+            # if mapping != 'no_mapping':
+            #     data = data.replace(mapping)
+            data = factorize_dataset(data)
 
             y = data[label_column]
             x = data.drop(label_column, axis=1)
