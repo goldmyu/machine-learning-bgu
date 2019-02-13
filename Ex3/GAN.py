@@ -186,7 +186,7 @@ def main(rsize):
                 if not os.path.exists("generated_data/"):
                     os.makedirs("generated_data/")
 
-                x_new_samples.to_csv("generated_data/generated_{}".format(file_name))
+                x_new_samples.to_csv("generated_data/generated_{}".format(file_name), index=False)
 
 
 # all_files = os.listdir(dataset_dir)
