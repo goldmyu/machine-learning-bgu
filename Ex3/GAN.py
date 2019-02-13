@@ -1,5 +1,7 @@
 import gc
 import os
+import time
+
 import tensorflow as tf
 import pandas as pd
 import numpy as np
@@ -19,6 +21,7 @@ from sklearn.model_selection import train_test_split
 dataset_dir = "./data-sets"
 label_column = 'label'
 
+
 # ======================================= Class definitions ===================================================
 
 
@@ -29,7 +32,7 @@ class GanGenerator:
         self.train_y = train_y
         self.rsize = rsize
         self.batch_size = 128
-        self.epochs = 50
+        self.epochs = 200
         self.random_noise_vector_dim = 100
 
     def generator(self, optimizer, output_shape):
@@ -138,6 +141,7 @@ class GanGenerator:
         gan.compile(loss='binary_crossentropy', optimizer=optimizer)
         return gan
 
+
 # ========================== Main code ================================================
 
 
@@ -157,7 +161,7 @@ def generate_samples(num_samples_to_add, x_train, y_train, index_start):
 
 def enumerate_classes(name):
     return {'iris_csv.csv': {'Iris-setosa': 0, 'Iris-versicolor': 1, 'Iris-virginica': 2},
-    }.get(name, 'no_mapping')
+            }.get(name, 'no_mapping')
 
 
 def main(rsize):
@@ -166,6 +170,7 @@ def main(rsize):
         print("Start working with data-set: {}".format(file_name))
         file_path = os.path.join(dataset_dir, file_name)
         if os.path.isfile(file_path):
+            dataset_start_train_time = time.time()
             data = pd.read_csv(file_path)
             mapping = enumerate_classes(file_name)
             if mapping != 'no_mapping':
@@ -175,13 +180,15 @@ def main(rsize):
             x = data.drop(label_column, axis=1)
             if x.select_dtypes(include=[np.object]).empty:
                 cols = x.columns
-                x_new_samples = generate_samples(rsize*len(x)*10, x, y, len(x))
+                x_new_samples = generate_samples(rsize * len(x) * 10, x, y, len(x))
                 x_new_samples.columns = cols
 
                 if not os.path.exists("generated_data/"):
                     os.makedirs("generated_data/")
 
                 x_new_samples.to_csv("generated_data/generated_{}".format(file_name), index=False)
+                print("Finished training GAN and generating data for dataset %s\ntime it took was: %.3f" % (
+                    file_name, time.time() - dataset_start_train_time))
 
 
 # all_files = os.listdir(dataset_dir)
@@ -195,4 +202,3 @@ def main(rsize):
 #             data.to_csv(path_or_buf="./data-sets/Admission_Predict_classification.csv",index=False)
 
 print("Finished synthesizing data using GAN")
-
