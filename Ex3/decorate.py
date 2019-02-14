@@ -24,11 +24,13 @@ label_column = 'label'
 # ==================================================================================
 
 
+# Compute ensemble error
 def compute_error(ensemble, x, y):
     pred = predict_ensemble(ensemble, x)
     return 1 - (pred == y).mean()
 
 
+# Predict labels for x using the ensemble
 def predict_ensemble(ensemble, x):
     pred = predict_proba_ensemble(ensemble, x)
     pred = np.argmax(pred, axis=1)
@@ -67,7 +69,7 @@ def generate_examples(x, examples_num):
     # since we refactored all of the categorical features, they are now of type int
     categorical_columns = x.select_dtypes(include='int64').columns
     numerical_examples = generate_numeric_examples(categorical_columns, examples_num, x)
-    categorical_examples = generate_categorical_data(categorical_columns, x, examples_num)
+    categorical_examples = generate_categorical_examples(categorical_columns, x, examples_num)
     examples = pd.concat([categorical_examples, numerical_examples], axis=1)
     stop = timeit.default_timer()
     print("Amount of seconds it took to generate examples: ", stop - start)
@@ -84,7 +86,7 @@ def generate_numeric_examples(categorical_columns, examples_num, x):
     return numerical_examples
 
 
-def generate_categorical_data(categorical_columns, x, examples_num):
+def generate_categorical_examples(categorical_columns, x, examples_num):
     categorical_data = pd.DataFrame(x, columns=categorical_columns)
     categorical_examples = pd.DataFrame(columns=categorical_columns)
     for i, col in enumerate(categorical_columns):
@@ -97,7 +99,7 @@ def generate_categorical_data(categorical_columns, x, examples_num):
     return categorical_examples
 
 
-# inveres probability :  (1/py) / Sigma(1/pi)   pi - probability of label i
+# Inveres probability :  (1/py) / Sigma(1/pi)   pi - probability of label i
 def inverse_pred(row):
     new_row = []
     for x in row:
@@ -110,6 +112,7 @@ def select_label(row):
     return get_label_from_rnd(number, row)
 
 
+# Give label to generated examples
 def label_examples(generated_x, ensemble):
     pred = np.asarray([clf.predict_proba(generated_x) for clf in ensemble])
     pred = np.average(pred, axis=0)
@@ -131,6 +134,7 @@ def factorize_categorical_data(x_with_categorical):
     return pd.DataFrame(x)
 
 
+# Get generated examples we previously generated using GAN
 def generate_examples_gan(examples_num, file_name, trial_num, offset):
     file_path = os.path.join(gen_dataset_dir, "generated_" + file_name)
     if os.path.isfile(file_path):
@@ -138,6 +142,7 @@ def generate_examples_gan(examples_num, file_name, trial_num, offset):
         return data.iloc[((trial_num - 1) * examples_num) + offset: (trial_num * examples_num) + offset]
 
 
+# Run 1 iteration of the whole decorate process
 def run_decorate(file_name, x, y, c_size, i_max, creation_factor, gan_mode, counter):
     i = 1
     trials = 1
@@ -154,7 +159,7 @@ def run_decorate(file_name, x, y, c_size, i_max, creation_factor, gan_mode, coun
         else:
             generated_x = generate_examples(x, examples_num)
         generated_y = label_examples(generated_x, ensemble)
-        x_full = pd.concat([x, generated_x],sort=False)
+        x_full = pd.concat([x, generated_x], sort=False)
         y_full = pd.concat([pd.DataFrame(y), generated_y])
         clf_iter = DecisionTreeClassifier(max_depth=2, min_samples_split=4)
         clf_iter.fit(X=x_full, y=y_full)
@@ -163,7 +168,6 @@ def run_decorate(file_name, x, y, c_size, i_max, creation_factor, gan_mode, coun
         if error_iter < current_error:
             i += 1
             current_error = error_iter
-            # print("Found new ensemble, the error is : %.4f" % (current_error))
         else:
             ensemble.pop()
         trials += 1
